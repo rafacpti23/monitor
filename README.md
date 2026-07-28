@@ -5,6 +5,8 @@
 
 **P-mon** é um sistema de monitoramento moderno inspirado no nmon, reescrito do zero em **Go + SQLite + Vue 3**. Um único binário no backend, um agente minúsculo nas suas VPS, e um dashboard em tempo real.
 
+🇧🇷 **PT-BR** · [🇺🇸 English](./README.en.md)
+
 ---
 
 ## ✨ Features
@@ -15,11 +17,11 @@
 - 🔧 **Serviços** — nginx, mysql, redis, etc. via systemctl
 - 🌐 **Websites** — HTTP, tempo de resposta, string de busca, expiração de SSL
 - ✅ **Checks** — ping, TCP, DNS, SSL expiry
-- 🚨 **Alertas** — WhatsApp (PAPI/Chat API), Email (SMTP), Webhook
+- 🚨 **Alertas** — WhatsApp (PAPI), Email (SMTP), Webhook
 - 👥 **Multi-usuário (SAAS)** — isolamento por tenant, roles (admin/member/viewer)
 - ⚡ **Tempo real** — dashboard atualiza via WebSocket, sem reload
-- 🗺️ **Mapa** — servidores geolocalizados
-- 📈 **Uptime** — histórico 24h / 7d / 30d / 12 meses
+- 🎨 **Whitelabel** — logo e cores por empresa
+- 📈 **Uptime** — histórico com retenção configurável
 
 ---
 
@@ -33,8 +35,8 @@ p-mon/
 ```
 
 **Stack:**
-- Backend: Go 1.21 + Gin + SQLite (mattn/go-sqlite3) + gorilla/websocket
-- Agent: Go + gopsutil (binário único, ~5-10 MB, < 20 MB RAM)
+- Backend: Go 1.21 + Gin + SQLite (modernc.org/sqlite, puro Go) + gorilla/websocket
+- Agent: Go + gopsutil (binário único, ~5-10 MB, ~5-7 MB RAM em produção)
 - Frontend: Vue 3 + Vite + Pinia (SVG charts, sem dependências pesadas)
 
 ---
@@ -60,21 +62,21 @@ npm run build    # build de produção em dist/
 
 ### Agente (na VPS monitorada)
 ```bash
-# Instalação em 1 linha (gerada pelo dashboard):
-curl -sSL https://seu-p-mon.com/install/agent.sh | bash -s -- SEU_SERVER_KEY
+# Instalação em 1 linha (gerada pelo dashboard, com flags de coleta):
+curl -sSL "https://seu-p-mon.com/install/agent.sh?key=SEU_SERVER_KEY&docker=1&pm2=1&interval=180" | sudo bash
 ```
 
 ---
 
 ## 📦 Deploy num VPS de 1 vCPU
 
-1. Compile o backend: `go build -o p-mon ./cmd/server`
-2. Build o frontend: `npm run build` → sirva o `dist/` (o backend pode servir estático)
-3. Configure o `config.json` com seu domínio, SMTP e WhatsApp API
-4. Rode como serviço systemd
-5. SQLite fica num arquivo só — backup é copiar `p-mon.db`
+1. Compile o backend: `go build -o p-mon-server ./cmd/server`
+2. Build do frontend: `npm run build` → `frontend/dist/`
+3. Configure o `config.json` (JWT, SMTP, PAPI WhatsApp, base URL)
+4. Rode como serviço systemd + Caddy na frente (HTTPS automático via Let's Encrypt)
+5. SQLite é um arquivo só — backup é copiar `p-mon.db`
 
-Consumo esperado: **~50-100 MB RAM total** (vs. 500 MB+ do stack PHP).
+**Consumo real em produção:** ~5-7 MB RAM (backend) + ~5-7 MB (agente por host).
 
 ---
 
@@ -82,14 +84,29 @@ Consumo esperado: **~50-100 MB RAM total** (vs. 500 MB+ do stack PHP).
 
 No dashboard → **Configurações → Canais de Alerta**:
 
-- **WhatsApp:** cole a URL da API (PAPI, Chat API, etc.) + sua chave
+- **WhatsApp (PAPI):** cole a URL da API PAPI + sua chave
 - **Email:** configure SMTP (host, porta, user, senha)
 - **Webhook:** URL para integrar com Slack, Discord, etc.
 
 Cada monitor tem regras configuráveis (threshold, ocorrências, cooldown).
+Alerta de servidor offline dispara automaticamente em `2× intervalo do agente`.
+
+---
+
+## 📱 PAPI WhatsApp API
+
+Para o canal de alertas via WhatsApp, o P-mon usa a **PAPI** — API oficial do WhatsApp Business (compatível com Cloud API e não-oficial).
+
+**Crie sua instância PAPI aqui:** 👉 **[https://papi.api.br](https://papi.api.br)**
+
+---
+
+## 📞 Contato
+
+**Rafa Martins** — 📱 **+55 27 99908-2624**
 
 ---
 
 ## 📄 Licença
 
-Projeto privado — Rafael.
+MIT — veja [LICENSE](./LICENSE).
