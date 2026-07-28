@@ -172,6 +172,40 @@ CREATE INDEX IF NOT EXISTS idx_check_history_check_id ON check_history(check_id)
 CREATE INDEX IF NOT EXISTS idx_check_history_timestamp ON check_history(timestamp);
 CREATE INDEX IF NOT EXISTS idx_check_history_check_ts ON check_history(check_id, timestamp);
 
+-- PAPI WhatsApp panels: each panel exposes a list of instances via /api/instances.
+CREATE TABLE IF NOT EXISTS papi_panels (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name TEXT NOT NULL DEFAULT '',
+    base_url TEXT NOT NULL DEFAULT 'https://papi.api.br',
+    panel_token TEXT NOT NULL DEFAULT '',
+    check_interval_sec INTEGER NOT NULL DEFAULT 60,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('ok','error','pending')),
+    last_checked DATETIME,
+    last_error TEXT NOT NULL DEFAULT '',
+    total_instances INTEGER NOT NULL DEFAULT 0,
+    connected_instances INTEGER NOT NULL DEFAULT 0,
+    channels TEXT NOT NULL DEFAULT '[]',
+    created_at DATETIME NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_papi_panels_user_id ON papi_panels(user_id);
+
+-- PAPI instances discovered per panel (cache for individual status tracking).
+CREATE TABLE IF NOT EXISTS papi_instances (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    panel_id INTEGER NOT NULL REFERENCES papi_panels(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    instance_id TEXT NOT NULL DEFAULT '',
+    name TEXT NOT NULL DEFAULT '',
+    phone_number TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT '',
+    last_seen DATETIME,
+    updated_at DATETIME NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(panel_id, instance_id)
+);
+CREATE INDEX IF NOT EXISTS idx_papi_instances_panel_id ON papi_instances(panel_id);
+CREATE INDEX IF NOT EXISTS idx_papi_instances_user_id ON papi_instances(user_id);
+
 CREATE TABLE IF NOT EXISTS alert_rules (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,

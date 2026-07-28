@@ -41,6 +41,14 @@
         </svg>
         Checks
       </RouterLink>
+      <RouterLink to="/papi" class="nav-item" :class="{ active: route.path.startsWith('/papi') }">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M10 2a8 8 0 0 0-7 12l-1 4 4-1a8 8 0 1 0 4-15z"/>
+          <path d="M7 9c0 3 2 5 5 5" stroke-width="1.2"/>
+        </svg>
+        WhatsApp PAPI
+        <span v-if="alertCounts.papi > 0" class="nav-badge">{{ alertCounts.papi }}</span>
+      </RouterLink>
 
       <div class="nav-section-label" style="margin-top: 16px;">Sistema</div>
       <RouterLink to="/incidents" class="nav-item" :class="{ active: route.path === '/incidents' }">
@@ -98,7 +106,7 @@ const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
 
-const alertCounts = ref({ servers: 0, websites: 0 })
+const alertCounts = ref({ servers: 0, websites: 0, papi: 0 })
 const activeIncidents = ref(0)
 
 const systemName = computed(() =>

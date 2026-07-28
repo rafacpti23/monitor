@@ -58,6 +58,12 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/papi',
+    name: 'Papi',
+    component: () => import('../views/Papi.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/incidents',
     name: 'Incidents',
     component: () => import('../views/Incidents.vue'),

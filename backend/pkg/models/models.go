@@ -147,6 +147,47 @@ type CheckHistory struct {
 	Details        string    `json:"details"`
 }
 
+// PapiPanel represents a PAPI WhatsApp panel whose instances are monitored.
+type PapiPanel struct {
+	ID                 int64      `json:"id"`
+	UserID             int64      `json:"user_id"`
+	Name               string     `json:"name"`
+	BaseURL            string     `json:"base_url"`
+	PanelToken         string     `json:"panel_token,omitempty"`
+	CheckIntervalSec   int        `json:"check_interval_sec"`
+	Status             string     `json:"status"`
+	LastChecked        *time.Time `json:"last_checked"`
+	LastError          string     `json:"last_error"`
+	TotalInstances     int        `json:"total_instances"`
+	ConnectedInstances int        `json:"connected_instances"`
+	Channels           string     `json:"channels"`
+	CreatedAt          time.Time  `json:"created_at"`
+
+	// Inline instances (populated on detail).
+	Instances []PapiInstance `json:"instances,omitempty"`
+}
+
+// PapiInstance is a single WhatsApp instance discovered under a panel.
+type PapiInstance struct {
+	ID          int64      `json:"id"`
+	PanelID     int64      `json:"panel_id"`
+	UserID      int64      `json:"user_id"`
+	InstanceID  string     `json:"instance_id"`
+	Name        string     `json:"name"`
+	PhoneNumber string     `json:"phone_number"`
+	Status      string     `json:"status"`
+	LastSeen    *time.Time `json:"last_seen"`
+	UpdatedAt   time.Time  `json:"updated_at"`
+}
+
+// PapiAPIInstance mirrors the JSON returned by PAPI /api/instances.
+type PapiAPIInstance struct {
+	ID          string `json:"id"`
+	Status      string `json:"status"`
+	Name        string `json:"name"`
+	PhoneNumber string `json:"phoneNumber"`
+}
+
 type AlertRule struct {
 	ID          int64  `json:"id"`
 	UserID      int64  `json:"user_id"`

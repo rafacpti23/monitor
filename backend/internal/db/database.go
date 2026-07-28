@@ -39,6 +39,46 @@ func Migrate(schemaPath string) error {
 	alters := []string{
 		`ALTER TABLE servers ADD COLUMN interval_seconds INTEGER NOT NULL DEFAULT 0`,
 	}
+
+	// Idempotent CREATE TABLE for features added after initial deploy.
+	// CREATE TABLE IF NOT EXISTS is safe to run every boot.
+	createStmts := []string{
+		`CREATE TABLE IF NOT EXISTS papi_panels (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			name TEXT NOT NULL DEFAULT '',
+			base_url TEXT NOT NULL DEFAULT 'https://papi.api.br',
+			panel_token TEXT NOT NULL DEFAULT '',
+			check_interval_sec INTEGER NOT NULL DEFAULT 60,
+			status TEXT NOT NULL DEFAULT 'pending',
+			last_checked DATETIME,
+			last_error TEXT NOT NULL DEFAULT '',
+			total_instances INTEGER NOT NULL DEFAULT 0,
+			connected_instances INTEGER NOT NULL DEFAULT 0,
+			channels TEXT NOT NULL DEFAULT '[]',
+			created_at DATETIME NOT NULL DEFAULT (datetime('now'))
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_papi_panels_user_id ON papi_panels(user_id)`,
+		`CREATE TABLE IF NOT EXISTS papi_instances (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			panel_id INTEGER NOT NULL REFERENCES papi_panels(id) ON DELETE CASCADE,
+			user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			instance_id TEXT NOT NULL DEFAULT '',
+			name TEXT NOT NULL DEFAULT '',
+			phone_number TEXT NOT NULL DEFAULT '',
+			status TEXT NOT NULL DEFAULT '',
+			last_seen DATETIME,
+			updated_at DATETIME NOT NULL DEFAULT (datetime('now')),
+			UNIQUE(panel_id, instance_id)
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_papi_instances_panel_id ON papi_instances(panel_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_papi_instances_user_id ON papi_instances(user_id)`,
+	}
+	for _, stmt := range createStmts {
+		if _, err := DB.Exec(stmt); err != nil {
+			log.Printf("[migrate] create skipped or failed: %v", err)
+		}
+	}
 	for _, stmt := range alters {
 		if _, err := DB.Exec(stmt); err != nil {
 			// SQLite returns "duplicate column name" when the column exists.

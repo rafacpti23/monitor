@@ -9,6 +9,7 @@ import (
 	"p-mon-backend/internal/alerts"
 	"p-mon-backend/internal/checks"
 	"p-mon-backend/internal/db"
+	"p-mon-backend/internal/papi"
 	"p-mon-backend/internal/ws"
 	"p-mon-backend/pkg/models"
 
@@ -22,6 +23,7 @@ func Start() {
 			runWebsiteChecks()
 			runGenericChecks()
 			checkServerNodata()
+			runPapiChecks()
 		}
 	}()
 
@@ -172,6 +174,31 @@ func runGenericChecks() {
 		if !ok {
 			alerts.CreateIncident(c.UserID, "check", c.ID, "check_failed", "warning", "Check "+c.Name+" failed", "[]")
 		}
+	}
+}
+
+// runPapiChecks checks each PAPI panel that is due based on its own
+// check_interval_sec. A panel never checked (last_checked IS NULL) is always due.
+func runPapiChecks() {
+	rows, err := db.DB.Query(`SELECT id FROM papi_panels
+		WHERE last_checked IS NULL
+		   OR (strftime('%s','now') - strftime('%s', last_checked)) >= check_interval_sec`)
+	if err != nil {
+		return
+	}
+	defer rows.Close()
+
+	ids := []int64{}
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err == nil {
+			ids = append(ids, id)
+		}
+	}
+	rows.Close()
+
+	for _, id := range ids {
+		papi.CheckPanel(id)
 	}
 }
 

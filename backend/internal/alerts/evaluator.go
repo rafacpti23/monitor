@@ -166,6 +166,24 @@ func CreateIncident(userID int64, monitorType string, monitorID int64, alertType
 	DispatchNotifications(userID, incidentID, channelsJSON, fmt.Sprintf("[P-mon] %s alert", alertType), msg)
 }
 
+// ResolveIncidentAndNotify closes the active incident for the given monitor+alert
+// and, if one existed, sends a "back to normal" notification through channelsJSON.
+// Returns true when an active incident was found and resolved.
+func ResolveIncidentAndNotify(userID int64, monitorType string, monitorID int64, alertType, channelsJSON, subject, body string) bool {
+	var incidentID int64
+	err := db.DB.QueryRow(`SELECT id FROM incidents WHERE user_id = ? AND monitor_type = ? AND monitor_id = ? AND alert_type = ? AND status IN ('active','acknowledged')`,
+		userID, monitorType, monitorID, alertType).Scan(&incidentID)
+	if err != nil || incidentID == 0 {
+		return false
+	}
+	_, _ = db.DB.Exec(`UPDATE incidents SET status = 'resolved', resolved_at = datetime('now'), end_time = datetime('now') WHERE id = ?`, incidentID)
+	log.Printf("Incident #%d resolved (user %d): %s", incidentID, userID, body)
+	if channelsJSON != "" && channelsJSON != "[]" {
+		DispatchNotifications(userID, incidentID, channelsJSON, subject, body)
+	}
+	return true
+}
+
 // DispatchNotifications resolves channel references and sends messages.
 // channelsJSON may be a JSON array of channel IDs (numbers) or channel type names.
 func DispatchNotifications(userID, incidentID int64, channelsJSON, subject, body string) {

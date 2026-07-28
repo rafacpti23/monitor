@@ -93,6 +93,15 @@ func main() {
 			protected.GET("/websites/:id/history", api.GetWebsiteHistory)
 			protected.GET("/websites/:id/incidents", api.GetWebsiteIncidents)
 
+			// PAPI WhatsApp panels
+			protected.GET("/papi/panels", api.ListPapiPanels)
+			protected.POST("/papi/panels", api.CreatePapiPanel)
+			protected.GET("/papi/panels/:id", api.GetPapiPanel)
+			protected.PUT("/papi/panels/:id", api.UpdatePapiPanel)
+			protected.DELETE("/papi/panels/:id", api.DeletePapiPanel)
+			protected.POST("/papi/panels/:id/check", api.CheckPapiPanelNow)
+			protected.GET("/papi/panels/:id/incidents", api.GetPapiPanelIncidents)
+
 			// Checks
 			protected.GET("/checks", api.ListChecks)
 			protected.POST("/checks", api.CreateCheck)
