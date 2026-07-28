@@ -1,0 +1,16 @@
+{
+  "backend_url": "https://api.p-mon.example.com",
+  "server_key": "abc123def456xyz987",
+  "interval_seconds": 30,
+  "collect": {
+    "system": true,
+    "docker": true,
+    "pm2": true,
+    "services": [
+      "nginx",
+      "mysql",
+      "redis"
+    ]
+  },
+  "log_file": "/var/log/p-mon-agent.log"
+}

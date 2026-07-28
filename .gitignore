@@ -1,0 +1,82 @@
+# ==== Build artifacts ====
+# Go binaries (root + subdirs)
+p-mon-server
+p-mon-server.exe
+p-mon-agent
+p-mon-agent.exe
+p-mon-migrate
+p-mon-migrate.exe
+backend/p-mon-server
+backend/p-mon-server.exe
+backend/server
+backend/server.exe
+agent/p-mon-agent
+agent/p-mon-agent.exe
+
+# Go build cache
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# ==== Node / Frontend ====
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/.cache/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ==== Deploy artifacts (secrets + tarballs + linux binaries) ====
+.deploy/*.pem
+.deploy/vps-key*
+.deploy/*.tar.gz
+.deploy/*.tgz
+.deploy/*-linux
+.deploy/*-linux-*
+.deploy/*.zip
+
+# ==== Config / secrets ====
+config.json
+backend/config.json
+agent/agent.json
+*.env
+.env
+.env.*
+!.env.example
+
+# ==== Runtime data ====
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+data/
+var/
+/tmp/
+
+# ==== Logs ====
+*.log
+server.log
+agent.log
+logs/
+
+# ==== IDE / OS ====
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ==== Coverage / test ====
+coverage/
+*.cover
+*.coverprofile

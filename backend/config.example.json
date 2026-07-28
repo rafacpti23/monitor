@@ -1,0 +1,18 @@
+{
+  "host": "0.0.0.0",
+  "port": 8080,
+  "jwt_secret": "CHANGE_ME_TO_RANDOM_STRING",
+  "db_path": "./p-mon.db",
+  "public_url": "https://p-mon.example.com",
+  "smtp": {
+    "host": "",
+    "port": 587,
+    "user": "",
+    "pass": "",
+    "from": ""
+  },
+  "whatsapp": {
+    "api_url": "",
+    "api_key": ""
+  }
+}
