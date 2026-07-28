@@ -1,21 +1,95 @@
-MIT License
+P-mon License (Source-Available, Non-Commercial-Resale)
+Copyright (c) 2026 Ramel Tecnologia - Rafa Martins. All rights reserved.
 
-Copyright (c) 2026 Ramel Tecnologia - Rafa Martins
+======================================================================
+PORTUGUÊS (versão oficial)
+======================================================================
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+Este software ("P-mon") e seu código-fonte são disponibilizados publicamente,
+mas NÃO são de código aberto no sentido tradicional. O uso está sujeito aos
+termos abaixo.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+1. USO PERMITIDO (sem custo, sem autorização prévia)
+   Você pode, gratuitamente:
+   a) Baixar, instalar, executar e usar o P-mon para fins próprios,
+      internos ou pessoais (inclusive dentro da sua empresa, para monitorar
+      seus próprios servidores e serviços);
+   b) Estudar o código-fonte;
+   c) Modificar o código para adequá-lo ao seu próprio uso;
+   d) Criar cópias de segurança (backup).
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+2. USO QUE EXIGE AUTORIZAÇÃO ESCRITA PRÉVIA
+   As atividades abaixo só são permitidas mediante autorização escrita e
+   prévia do titular dos direitos (Rafa Martins / Ramel Tecnologia):
+   a) Vender, revender, sublicenciar ou distribuir o P-mon, no todo ou em
+      parte, de forma paga ou como produto;
+   b) Oferecer o P-mon como serviço (SaaS, hospedagem gerenciada, "as a
+      service") a terceiros, de forma gratuita ou paga;
+   c) Redistribuir versões modificadas a terceiros;
+   d) Usar o P-mon, ou obras derivadas, como base de um produto ou serviço
+      comercial oferecido a terceiros;
+   e) Remover, ocultar ou alterar as marcas, logotipos, nome "P-mon" ou os
+      avisos de direitos autorais (exceto no whitelabel autorizado pelo
+      próprio produto para clientes finais).
+
+3. AUTORIZAÇÃO / LICENCIAMENTO COMERCIAL
+   Para qualquer uso descrito na Seção 2, entre em contato para obter uma
+   licença comercial:
+       Rafa Martins — +55 27 99908-2624
+
+4. PROPRIEDADE
+   Todos os direitos não expressamente concedidos permanecem reservados ao
+   titular. Esta licença não transfere titularidade sobre o P-mon.
+
+5. ISENÇÃO DE GARANTIA
+   O SOFTWARE É FORNECIDO "COMO ESTÁ", SEM GARANTIA DE QUALQUER TIPO,
+   EXPRESSA OU IMPLÍCITA. EM NENHUMA HIPÓTESE OS AUTORES OU TITULARES SERÃO
+   RESPONSÁVEIS POR QUAISQUER REIVINDICAÇÕES, DANOS OU OUTRAS
+   RESPONSABILIDADES DECORRENTES DO USO DO SOFTWARE.
+
+======================================================================
+ENGLISH (informative translation)
+======================================================================
+
+This software ("P-mon") and its source code are made publicly available but
+are NOT open source in the traditional sense. Use is subject to the terms
+below.
+
+1. PERMITTED USE (free, no prior authorization)
+   You may, free of charge:
+   a) Download, install, run, and use P-mon for your own internal or
+      personal purposes (including within your company, to monitor your own
+      servers and services);
+   b) Study the source code;
+   c) Modify the code for your own use;
+   d) Make backup copies.
+
+2. USE REQUIRING PRIOR WRITTEN AUTHORIZATION
+   The following require prior written authorization from the rights holder
+   (Rafa Martins / Ramel Tecnologia):
+   a) Selling, reselling, sublicensing, or distributing P-mon, in whole or
+      in part, for a fee or as a product;
+   b) Offering P-mon as a service (SaaS, managed hosting, "as a service") to
+      third parties, whether free or paid;
+   c) Redistributing modified versions to third parties;
+   d) Using P-mon, or derivative works, as the basis of a commercial product
+      or service offered to third parties;
+   e) Removing, hiding, or altering the trademarks, logos, the "P-mon" name,
+      or copyright notices (except whitelabeling explicitly enabled by the
+      product itself for end customers).
+
+3. COMMERCIAL LICENSING
+   For any use described in Section 2, contact for a commercial license:
+       Rafa Martins — +55 27 99908-2624
+
+4. OWNERSHIP
+   All rights not expressly granted remain reserved to the rights holder.
+   This license transfers no ownership of P-mon.
+
+5. DISCLAIMER OF WARRANTY
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED. IN NO EVENT SHALL THE AUTHORS OR RIGHTS HOLDERS BE LIABLE FOR ANY
+   CLAIM, DAMAGES, OR OTHER LIABILITY ARISING FROM THE USE OF THE SOFTWARE.
+
+In case of conflict between the Portuguese and English versions, the
+Portuguese version prevails.

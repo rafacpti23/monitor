@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="./docs/logo-full.png" alt="P-mon" width="280" />
+</p>
+
 # P-mon 🖥️📡
 
 > Monitoramento leve, self-hosted, para VPS, websites, Docker e PM2.
@@ -109,4 +113,10 @@ Para o canal de alertas via WhatsApp, o P-mon usa a **PAPI** — API oficial do 
 
 ## 📄 Licença
 
-MIT — veja [LICENSE](./LICENSE).
+**P-mon License** — source-available, uso próprio livre, venda/SaaS mediante autorização.
+
+- ✅ Você **pode**: baixar, instalar, usar internamente (pessoal ou na sua empresa), estudar e modificar o código para uso próprio, fazer backup.
+- 🔒 Você **precisa de autorização escrita** para: vender, revender, sublicenciar, oferecer como SaaS/serviço a terceiros, redistribuir versões modificadas ou remover as marcas.
+
+Para licença comercial: **Rafa Martins — +55 27 99908-2624**.
+Veja [LICENSE](./LICENSE) para os termos completos.
