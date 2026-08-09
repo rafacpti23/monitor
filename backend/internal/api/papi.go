@@ -8,18 +8,19 @@ import (
 
 	"p-mon-backend/internal/db"
 	"p-mon-backend/internal/papi"
+	"p-mon-backend/internal/stevo"
 	"p-mon-backend/pkg/models"
 
 	"github.com/gin-gonic/gin"
 )
 
 // papiPanelCols keeps SELECT column order in sync with scanPapiPanel.
-const papiPanelCols = `id, user_id, name, base_url, panel_token, check_interval_sec,
+const papiPanelCols = `id, user_id, name, COALESCE(provider, 'papi'), base_url, panel_token, check_interval_sec,
 	status, last_checked, last_error, total_instances, connected_instances, channels, created_at`
 
 func scanPapiPanel(row interface{ Scan(...interface{}) error }, p *models.PapiPanel) error {
 	var lastChecked sql.NullTime
-	err := row.Scan(&p.ID, &p.UserID, &p.Name, &p.BaseURL, &p.PanelToken, &p.CheckIntervalSec,
+	err := row.Scan(&p.ID, &p.UserID, &p.Name, &p.Provider, &p.BaseURL, &p.PanelToken, &p.CheckIntervalSec,
 		&p.Status, &lastChecked, &p.LastError, &p.TotalInstances, &p.ConnectedInstances,
 		&p.Channels, &p.CreatedAt)
 	if err != nil {
@@ -95,6 +96,7 @@ func GetPapiPanel(c *gin.Context) {
 // papiPanelBody is the JSON body for create/update.
 type papiPanelBody struct {
 	Name             string   `json:"name"`
+	Provider         string   `json:"provider"`
 	BaseURL          string   `json:"base_url"`
 	PanelToken       string   `json:"panel_token"`
 	CheckIntervalSec int      `json:"check_interval_sec"`
@@ -103,9 +105,17 @@ type papiPanelBody struct {
 
 func (b *papiPanelBody) normalize() {
 	b.Name = strings.TrimSpace(b.Name)
+	b.Provider = strings.ToLower(strings.TrimSpace(b.Provider))
+	if b.Provider != "stevo" {
+		b.Provider = "papi"
+	}
 	b.BaseURL = strings.TrimRight(strings.TrimSpace(b.BaseURL), "/")
 	if b.BaseURL == "" {
-		b.BaseURL = "https://papi.api.br"
+		if b.Provider == "stevo" {
+			b.BaseURL = "https://openapi.stevo.chat"
+		} else {
+			b.BaseURL = "https://papi.api.br"
+		}
 	}
 	if b.CheckIntervalSec < 30 {
 		b.CheckIntervalSec = 60
@@ -133,9 +143,9 @@ func CreatePapiPanel(c *gin.Context) {
 	}
 
 	res, err := db.DB.Exec(`INSERT INTO papi_panels
-		(user_id, name, base_url, panel_token, check_interval_sec, status, channels)
-		VALUES (?, ?, ?, ?, ?, 'pending', ?)`,
-		userID, body.Name, body.BaseURL, body.PanelToken, body.CheckIntervalSec, channelsJSON)
+		(user_id, name, provider, base_url, panel_token, check_interval_sec, status, channels)
+		VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)`,
+		userID, body.Name, body.Provider, body.BaseURL, body.PanelToken, body.CheckIntervalSec, channelsJSON)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
@@ -143,7 +153,11 @@ func CreatePapiPanel(c *gin.Context) {
 	id, _ := res.LastInsertId()
 
 	// Kick off first check async (best-effort; scheduler will pick it up too).
-	go papi.CheckPanel(id)
+	if body.Provider == "stevo" {
+		go stevo.CheckStevoPanel(id)
+	} else {
+		go papi.CheckPanel(id)
+	}
 
 	c.JSON(201, gin.H{"id": id})
 }
@@ -211,11 +225,16 @@ func CheckPapiPanelNow(c *gin.Context) {
 
 	// Ownership check.
 	var owner int64
-	if err := db.DB.QueryRow(`SELECT user_id FROM papi_panels WHERE id = ?`, id).Scan(&owner); err != nil || owner != userID {
+	var provider string
+	if err := db.DB.QueryRow(`SELECT user_id, COALESCE(provider, 'papi') FROM papi_panels WHERE id = ?`, id).Scan(&owner, &provider); err != nil || owner != userID {
 		c.JSON(404, gin.H{"error": "panel not found"})
 		return
 	}
-	go papi.CheckPanel(id)
+	if provider == "stevo" {
+		go stevo.CheckStevoPanel(id)
+	} else {
+		go papi.CheckPanel(id)
+	}
 	c.JSON(200, gin.H{"ok": true, "message": "check triggered"})
 }
 

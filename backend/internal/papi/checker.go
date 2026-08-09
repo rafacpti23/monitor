@@ -23,10 +23,10 @@ import (
 func CheckPanel(panelID int64) {
 	var p models.PapiPanel
 	var lastChecked sql.NullTime
-	err := db.DB.QueryRow(`SELECT id, user_id, name, base_url, panel_token, check_interval_sec,
+	err := db.DB.QueryRow(`SELECT id, user_id, name, provider, base_url, panel_token, check_interval_sec,
 		status, last_checked, last_error, total_instances, connected_instances, channels, created_at
 		FROM papi_panels WHERE id = ?`, panelID).Scan(
-		&p.ID, &p.UserID, &p.Name, &p.BaseURL, &p.PanelToken, &p.CheckIntervalSec,
+		&p.ID, &p.UserID, &p.Name, &p.Provider, &p.BaseURL, &p.PanelToken, &p.CheckIntervalSec,
 		&p.Status, &lastChecked, &p.LastError, &p.TotalInstances, &p.ConnectedInstances,
 		&p.Channels, &p.CreatedAt)
 	if err != nil {

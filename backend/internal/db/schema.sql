@@ -173,10 +173,12 @@ CREATE INDEX IF NOT EXISTS idx_check_history_timestamp ON check_history(timestam
 CREATE INDEX IF NOT EXISTS idx_check_history_check_ts ON check_history(check_id, timestamp);
 
 -- PAPI WhatsApp panels: each panel exposes a list of instances via /api/instances.
+-- provider = 'papi' | 'stevo'
 CREATE TABLE IF NOT EXISTS papi_panels (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     name TEXT NOT NULL DEFAULT '',
+    provider TEXT NOT NULL DEFAULT 'papi' CHECK(provider IN ('papi','stevo')),
     base_url TEXT NOT NULL DEFAULT 'https://papi.api.br',
     panel_token TEXT NOT NULL DEFAULT '',
     check_interval_sec INTEGER NOT NULL DEFAULT 60,

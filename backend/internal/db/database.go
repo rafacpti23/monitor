@@ -38,6 +38,7 @@ func Migrate(schemaPath string) error {
 	// indicate the column already exists are ignored.
 	alters := []string{
 		`ALTER TABLE servers ADD COLUMN interval_seconds INTEGER NOT NULL DEFAULT 0`,
+		`ALTER TABLE papi_panels ADD COLUMN provider TEXT NOT NULL DEFAULT 'papi'`,
 	}
 
 	// Idempotent CREATE TABLE for features added after initial deploy.
@@ -47,6 +48,7 @@ func Migrate(schemaPath string) error {
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
 			name TEXT NOT NULL DEFAULT '',
+			provider TEXT NOT NULL DEFAULT 'papi',
 			base_url TEXT NOT NULL DEFAULT 'https://papi.api.br',
 			panel_token TEXT NOT NULL DEFAULT '',
 			check_interval_sec INTEGER NOT NULL DEFAULT 60,

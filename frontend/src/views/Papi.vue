@@ -2,7 +2,7 @@
   <div>
     <div class="page-header">
       <div>
-        <h1 class="page-title">PAPI WhatsApp</h1>
+        <h1 class="page-title">Gestor WhatsApp</h1>
         <p class="page-subtitle">
           {{ panels.length }} painel(is) monitorado(s)
           <span v-if="totalInstances > 0" class="text-muted">
@@ -14,7 +14,7 @@
         <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M10 4v12M4 10h12"/>
         </svg>
-        Adicionar Painel PAPI
+        Adicionar Painel
       </button>
     </div>
 
@@ -22,7 +22,7 @@
 
     <div v-else-if="!panels.length" class="card">
       <div class="empty-state">
-        Nenhum painel PAPI monitorado ainda.<br/>
+        Nenhum painel monitorado ainda.<br/>
         Adicione o primeiro para acompanhar suas instâncias de WhatsApp!
       </div>
     </div>
@@ -33,7 +33,12 @@
           <div class="panel-info">
             <div class="panel-status-dot" :class="panelDotClass(panel)"></div>
             <div>
-              <div class="panel-name">{{ panel.name }}</div>
+              <div class="panel-name">
+                {{ panel.name }}
+                <span class="provider-badge" :class="'provider-' + (panel.provider || 'papi')">
+                  {{ (panel.provider || 'papi').toUpperCase() }}
+                </span>
+              </div>
               <div class="panel-url font-mono text-muted">{{ panel.base_url }}</div>
             </div>
           </div>
@@ -102,24 +107,41 @@
       </div>
     </div>
 
-    <Modal :visible="showModal" :title="editingId ? 'Editar Painel PAPI' : 'Adicionar Painel PAPI'" @close="showModal = false">
+    <Modal :visible="showModal" :title="editingId ? 'Editar Painel' : 'Adicionar Painel'" @close="showModal = false">
       <form @submit.prevent="savePanel">
         <div class="form-group">
-          <label class="form-label">Nome</label>
-          <input v-model="form.name" class="form-input" placeholder="ex: PAPI Produção" required />
+          <label class="form-label">Provedor</label>
+          <div class="provider-select">
+            <button type="button" class="provider-option" :class="{ active: form.provider === 'papi' }"
+                    @click="selectProvider('papi')">
+              <span class="provider-icon">🔗</span>
+              <span class="provider-name">PAPI</span>
+              <span class="provider-desc">papi.api.br</span>
+            </button>
+            <button type="button" class="provider-option" :class="{ active: form.provider === 'stevo' }"
+                    @click="selectProvider('stevo')">
+              <span class="provider-icon">💬</span>
+              <span class="provider-name">Stevo</span>
+              <span class="provider-desc">stevo.chat</span>
+            </button>
+          </div>
         </div>
         <div class="form-group">
-          <label class="form-label">URL base do painel</label>
-          <input v-model="form.base_url" class="form-input" placeholder="https://papi.api.br" />
-          <div class="form-hint">Sem barra no final. O P-mon chama {{ (form.base_url || 'https://papi.api.br') }}/api/instances</div>
+          <label class="form-label">Nome</label>
+          <input v-model="form.name" class="form-input" :placeholder="form.provider === 'stevo' ? 'ex: Stevo Produção' : 'ex: PAPI Produção'" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">{{ form.provider === 'stevo' ? 'URL base da API' : 'URL base do painel' }}</label>
+          <input v-model="form.base_url" class="form-input" :placeholder="form.provider === 'stevo' ? 'https://openapi.stevo.chat' : 'https://papi.api.br'" />
+          <div class="form-hint">Sem barra no final.{{ form.provider === 'stevo' ? ' O P-mon chama <base>/mcp' : ' O P-mon chama <base>/api/v1/instances' }}</div>
         </div>
         <div class="form-group">
           <label class="form-label">
-            Token global do painel (x-panel-token)
+            {{ form.provider === 'stevo' ? 'Token de acesso (Bearer)' : 'Token global do painel (x-panel-token)' }}
             <span v-if="editingId" class="text-muted" style="font-weight: 400;">— deixe em branco p/ manter</span>
           </label>
           <input v-model="form.panel_token" type="password" class="form-input"
-                 :placeholder="editingId ? '•••••••• (não alterar)' : 'SEU_TOKEN_GLOBAL_PAPI'"
+                 :placeholder="editingId ? '•••••••• (não alterar)' : 'SEU_TOKEN'"
                  :required="!editingId" />
         </div>
         <div class="form-group">
@@ -162,15 +184,25 @@ const editingId = ref(null)
 let pollTimer = null
 
 function emptyForm() {
-  return { name: '', base_url: 'https://papi.api.br', panel_token: '', check_interval_sec: 60 }
+  return { name: '', provider: 'papi', base_url: 'https://papi.api.br', panel_token: '', check_interval_sec: 60 }
 }
 const form = ref(emptyForm())
+
+function selectProvider(provider) {
+  form.value.provider = provider
+  if (provider === 'stevo') {
+    form.value.base_url = 'https://openapi.stevo.chat'
+  } else {
+    form.value.base_url = 'https://papi.api.br'
+  }
+}
 
 const totalInstances = computed(() => panels.value.reduce((s, p) => s + (p.total_instances || 0), 0))
 const connectedInstances = computed(() => panels.value.reduce((s, p) => s + (p.connected_instances || 0), 0))
 
 function isConnected(inst) {
-  return (inst.status || '').toUpperCase() === 'CONNECTED'
+  const s = (inst.status || '').toUpperCase()
+  return s === 'CONNECTED' || s === 'OPEN' || s === 'ACTIVE'
 }
 function allConnected(panel) {
   return panel.total_instances > 0 && panel.connected_instances === panel.total_instances
@@ -225,6 +257,7 @@ function openAdd() {
 function openEdit(panel) {
   form.value = {
     name: panel.name,
+    provider: panel.provider || 'papi',
     base_url: panel.base_url,
     panel_token: '',
     check_interval_sec: panel.check_interval_sec || 60,
@@ -331,4 +364,26 @@ onUnmounted(() => { if (pollTimer) clearInterval(pollTimer) })
 .inst-badge { font-family: var(--font-mono); font-size: 11px; font-weight: 600; }
 .inst-badge.connected { color: var(--accent, #00e676); }
 .inst-badge.disconnected { color: var(--accent-red, #f44336); }
+
+/* Provider badge on panel cards */
+.provider-badge {
+  display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 6px;
+  border-radius: 4px; margin-left: 8px; vertical-align: middle; letter-spacing: 0.5px;
+}
+.provider-badge.provider-papi { background: rgba(0,230,118,0.15); color: var(--accent, #00e676); }
+.provider-badge.provider-stevo { background: rgba(33,150,243,0.15); color: #2196f3; }
+
+/* Provider selector in modal */
+.provider-select { display: flex; gap: 10px; }
+.provider-option {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 14px 12px; border: 1.5px solid var(--border, #21262d); border-radius: 8px;
+  background: transparent; color: var(--text); cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); font-family: inherit;
+}
+.provider-option:hover { border-color: rgba(255,255,255,0.15); background: rgba(255,255,255,0.03); }
+.provider-option.active { border-color: var(--accent, #00e676); background: rgba(0,230,118,0.06); }
+.provider-icon { font-size: 20px; }
+.provider-name { font-weight: 600; font-size: 13px; }
+.provider-desc { font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); }
 </style>

@@ -1,6 +1,9 @@
 package models
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 type Company struct {
 	ID          int64     `json:"id"`
@@ -147,11 +150,12 @@ type CheckHistory struct {
 	Details        string    `json:"details"`
 }
 
-// PapiPanel represents a PAPI WhatsApp panel whose instances are monitored.
+// PapiPanel represents a WhatsApp monitoring panel (PAPI or Stevo provider).
 type PapiPanel struct {
 	ID                 int64      `json:"id"`
 	UserID             int64      `json:"user_id"`
 	Name               string     `json:"name"`
+	Provider           string     `json:"provider"`
 	BaseURL            string     `json:"base_url"`
 	PanelToken         string     `json:"panel_token,omitempty"`
 	CheckIntervalSec   int        `json:"check_interval_sec"`
@@ -195,6 +199,36 @@ type PapiAPIInstance struct {
 	Name           string `json:"name"`
 	PhoneConnected string `json:"phone_connected"`
 	CreatedAt      string `json:"created_at"`
+}
+
+// StevoMCPRequest is the JSON-RPC request body for the Stevo MCP endpoint.
+type StevoMCPRequest struct {
+	JSONRPC string      `json:"jsonrpc"`
+	ID      int         `json:"id"`
+	Method  string      `json:"method"`
+	Params  interface{} `json:"params,omitempty"`
+}
+
+// StevoMCPResponse is the JSON-RPC response from the Stevo MCP endpoint.
+type StevoMCPResponse struct {
+	JSONRPC string          `json:"jsonrpc"`
+	ID      int             `json:"id"`
+	Result  json.RawMessage `json:"result,omitempty"`
+	Error   *StevoMCPError  `json:"error,omitempty"`
+}
+
+// StevoMCPError represents an error in a Stevo MCP response.
+type StevoMCPError struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+}
+
+// StevoInstance represents a single instance from Stevo's list_instances result.
+type StevoInstance struct {
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+	Status string `json:"status"`
+	Phone  string `json:"phone"`
 }
 
 type AlertRule struct {

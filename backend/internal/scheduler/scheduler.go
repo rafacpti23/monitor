@@ -10,6 +10,7 @@ import (
 	"p-mon-backend/internal/checks"
 	"p-mon-backend/internal/db"
 	"p-mon-backend/internal/papi"
+	"p-mon-backend/internal/stevo"
 	"p-mon-backend/internal/ws"
 	"p-mon-backend/pkg/models"
 
@@ -177,10 +178,14 @@ func runGenericChecks() {
 	}
 }
 
-// runPapiChecks checks each PAPI panel that is due based on its own
-// check_interval_sec. A panel never checked (last_checked IS NULL) is always due.
+// runPapiChecks checks each WhatsApp panel (PAPI or Stevo) that is due based
+// on its own check_interval_sec.
 func runPapiChecks() {
-	rows, err := db.DB.Query(`SELECT id FROM papi_panels
+	type panelRef struct {
+		id       int64
+		provider string
+	}
+	rows, err := db.DB.Query(`SELECT id, COALESCE(provider, 'papi') FROM papi_panels
 		WHERE last_checked IS NULL
 		   OR (strftime('%s','now') - strftime('%s', last_checked)) >= check_interval_sec`)
 	if err != nil {
@@ -188,17 +193,22 @@ func runPapiChecks() {
 	}
 	defer rows.Close()
 
-	ids := []int64{}
+	refs := []panelRef{}
 	for rows.Next() {
-		var id int64
-		if err := rows.Scan(&id); err == nil {
-			ids = append(ids, id)
+		var r panelRef
+		if err := rows.Scan(&r.id, &r.provider); err == nil {
+			refs = append(refs, r)
 		}
 	}
 	rows.Close()
 
-	for _, id := range ids {
-		papi.CheckPanel(id)
+	for _, r := range refs {
+		switch r.provider {
+		case "stevo":
+			stevo.CheckStevoPanel(r.id)
+		default:
+			papi.CheckPanel(r.id)
+		}
 	}
 }
 
