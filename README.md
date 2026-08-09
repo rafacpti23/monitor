@@ -111,6 +111,18 @@ Para o canal de alertas via WhatsApp, o P-mon usa a **PAPI** — API oficial do 
 
 ---
 
+## 💰 Contribuição
+
+Se o P-mon te ajudou, considere fazer uma contribuição via PIX:
+
+```
+nubank@ramelseg.com.br
+```
+
+Pix Copia e Cola: `nubank@ramelseg.com.br`
+
+---
+
 ## 📄 Licença
 
 **P-mon License** — source-available, uso próprio livre, venda/SaaS mediante autorização.

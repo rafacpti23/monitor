@@ -10,6 +10,7 @@
       <div class="page-container">
         <RouterView />
       </div>
+      <AppFooter />
     </div>
   </div>
 </template>
@@ -19,6 +20,7 @@ import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import Sidebar from './components/Sidebar.vue'
 import Topbar from './components/Topbar.vue'
+import AppFooter from './components/AppFooter.vue'
 import { RouterView } from 'vue-router'
 
 const route = useRoute()
