@@ -223,12 +223,33 @@ type StevoMCPError struct {
 	Message string `json:"message"`
 }
 
+// StevoMCPResult is the inner result from tools/call, containing content blocks.
+type StevoMCPResult struct {
+	Content []StevoMCPContent `json:"content"`
+}
+
+// StevoMCPContent is a content block in the MCP result.
+type StevoMCPContent struct {
+	Type string `json:"type"`
+	Text string `json:"text"`
+}
+
+// StevoInstancesResponse is the JSON inside the text content of list_instances.
+type StevoInstancesResponse struct {
+	Instances []StevoInstance `json:"instances"`
+}
+
 // StevoInstance represents a single instance from Stevo's list_instances result.
 type StevoInstance struct {
-	ID     string `json:"id"`
-	Name   string `json:"name"`
-	Status string `json:"status"`
-	Phone  string `json:"phone"`
+	ID           string `json:"id"`
+	Name         string `json:"name"`
+	InstanceName string `json:"instance_name"`
+	Status       string `json:"status"`
+	Connected    bool   `json:"connected"`
+	PhoneNumber  string `json:"phone_number"`
+	ProfileName  string `json:"profile_name"`
+	Engine       string `json:"engine"`
+	CreatedAt    string `json:"created_at"`
 }
 
 type AlertRule struct {

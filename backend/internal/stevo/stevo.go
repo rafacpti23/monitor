@@ -50,7 +50,7 @@ func CheckStevoPanel(panelID int64) {
 	total := len(instances)
 	connected := 0
 	for _, inst := range instances {
-		if isStevoConnected(inst.Status) {
+		if inst.Connected {
 			connected++
 		}
 	}
@@ -62,22 +62,30 @@ func CheckStevoPanel(panelID int64) {
 	userChannels := alerts.GetUserChannelsJSON(p.UserID)
 
 	for _, inst := range instances {
-		localID := upsertInstance(p.ID, p.UserID, inst)
-
-		var prevStatus string
-		_ = db.DB.QueryRow(`SELECT status FROM papi_instances WHERE id = ?`, localID).Scan(&prevStatus)
-
-		label := inst.Name
-		if label == "" {
-			label = inst.ID
+		displayName := inst.Name
+		if displayName == "" {
+			displayName = inst.InstanceName
+		}
+		if displayName == "" {
+			displayName = inst.ID
 		}
 
-		if !isStevoConnected(inst.Status) {
-			msg := fmt.Sprintf("Instância Stevo '%s' está %s (painel %s)", label, inst.Status, p.Name)
+		// Read previous status BEFORE upsert so we can detect transitions.
+		var prevStatus string
+		var prevConnected int
+		_ = db.DB.QueryRow(`SELECT status, CASE WHEN status IN ('active','connected','open') THEN 1 ELSE 0 END
+			FROM papi_instances WHERE panel_id = ? AND instance_id = ?`,
+			panelID, inst.ID).Scan(&prevStatus, &prevConnected)
+
+		localID := upsertInstance(p.ID, p.UserID, inst)
+
+		if !inst.Connected {
+			msg := fmt.Sprintf("Instância Stevo '%s' está %s (painel %s)", displayName, inst.Status, p.Name)
 			alerts.CreateIncident(p.UserID, "papi_instance", localID, "papi_disconnected", "critical", msg, userChannels)
-		} else if prevStatus != "" && !isStevoConnected(prevStatus) {
+		} else if prevConnected == 0 && prevStatus != "" {
+			// Was NOT connected before, now IS → resolve + notify.
 			subject := "[P-mon] Instância Stevo reconectada"
-			body := fmt.Sprintf("Instância Stevo '%s' voltou a ficar conectada (painel %s)", label, p.Name)
+			body := fmt.Sprintf("Instância Stevo '%s' voltou a ficar conectada (painel %s)", displayName, p.Name)
 			alerts.ResolveIncidentAndNotify(p.UserID, "papi_instance", localID, "papi_disconnected", userChannels, subject, body)
 		}
 	}
@@ -98,7 +106,7 @@ func CheckStevoPanel(panelID int64) {
 			}
 			if !seen[eInstID] {
 				_, _ = db.DB.Exec(`UPDATE papi_instances SET status = 'REMOVED', updated_at = datetime('now') WHERE id = ?`, eID)
-				if isStevoConnected(eStatus) {
+				if eStatus == "active" || eStatus == "connected" || eStatus == "open" {
 					label := eName
 					if label == "" {
 						label = eInstID
@@ -119,8 +127,12 @@ func CheckStevoPanel(panelID int64) {
 
 // upsertInstance inserts or updates a Stevo instance and returns its local ID.
 func upsertInstance(panelID, userID int64, inst models.StevoInstance) int64 {
-	phone := inst.Phone
+	phone := inst.PhoneNumber
 	status := inst.Status
+	displayName := inst.Name
+	if displayName == "" {
+		displayName = inst.InstanceName
+	}
 
 	var existingID int64
 	err := db.DB.QueryRow(`SELECT id FROM papi_instances WHERE panel_id = ? AND instance_id = ?`,
@@ -129,7 +141,7 @@ func upsertInstance(panelID, userID int64, inst models.StevoInstance) int64 {
 	if err != nil {
 		res, _ := db.DB.Exec(`INSERT INTO papi_instances (panel_id, user_id, instance_id, name, phone_number, status, updated_at)
 			VALUES (?, ?, ?, ?, ?, ?, datetime('now'))`,
-			panelID, userID, inst.ID, inst.Name, phone, status)
+			panelID, userID, inst.ID, displayName, phone, status)
 		if res != nil {
 			id, _ := res.LastInsertId()
 			return id
@@ -138,18 +150,23 @@ func upsertInstance(panelID, userID int64, inst models.StevoInstance) int64 {
 	}
 
 	_, _ = db.DB.Exec(`UPDATE papi_instances SET name = ?, phone_number = ?, status = ?, updated_at = datetime('now') WHERE id = ?`,
-		inst.Name, phone, status, existingID)
+		displayName, phone, status, existingID)
 	return existingID
 }
 
-// fetchStevoInstances calls the Stevo MCP endpoint using JSON-RPC list_instances.
+// fetchStevoInstances calls the Stevo MCP endpoint using tools/call list_instances.
 func fetchStevoInstances(baseURL, apiToken string) ([]models.StevoInstance, error) {
 	url := strings.TrimRight(baseURL, "/") + "/mcp"
 
+	// MCP protocol: call the "list_instances" tool via tools/call
 	reqBody := models.StevoMCPRequest{
 		JSONRPC: "2.0",
 		ID:      1,
-		Method:  "list_instances",
+		Method:  "tools/call",
+		Params: map[string]interface{}{
+			"name":      "list_instances",
+			"arguments": map[string]interface{}{},
+		},
 	}
 	bodyBytes, _ := json.Marshal(reqBody)
 
@@ -173,20 +190,51 @@ func fetchStevoInstances(baseURL, apiToken string) ([]models.StevoInstance, erro
 		return nil, fmt.Errorf("Stevo returned %d: %s", resp.StatusCode, string(body))
 	}
 
+	// Stevo MCP returns SSE (text/event-stream). Read the "data:" line.
+	respBody, readErr := io.ReadAll(resp.Body)
+	if readErr != nil {
+		return nil, fmt.Errorf("failed to read Stevo response: %v", readErr)
+	}
+
+	var jsonData string
+	lines := strings.Split(string(respBody), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "data:") {
+			jsonData = strings.TrimSpace(strings.TrimPrefix(line, "data:"))
+		}
+	}
+	if jsonData == "" {
+		jsonData = strings.TrimSpace(string(respBody))
+	}
+	if jsonData == "" {
+		return nil, fmt.Errorf("Stevo MCP response contained no data")
+	}
+
+	// Parse the JSON-RPC response
 	var mcpResp models.StevoMCPResponse
-	if err := json.NewDecoder(resp.Body).Decode(&mcpResp); err != nil {
-		return nil, fmt.Errorf("failed to decode Stevo MCP response: %v", err)
+	if err := json.Unmarshal([]byte(jsonData), &mcpResp); err != nil {
+		return nil, fmt.Errorf("failed to decode Stevo MCP response: %v (raw: %.200s)", err, jsonData)
 	}
 	if mcpResp.Error != nil {
 		return nil, fmt.Errorf("Stevo MCP error %d: %s", mcpResp.Error.Code, mcpResp.Error.Message)
 	}
 
-	// The result contains an array of instances.
-	var instances []models.StevoInstance
-	if err := json.Unmarshal(mcpResp.Result, &instances); err != nil {
-		return nil, fmt.Errorf("failed to parse Stevo instances: %v", err)
+	// The result contains content[].text which is a JSON string with instances.
+	var mcpResult models.StevoMCPResult
+	if err := json.Unmarshal(mcpResp.Result, &mcpResult); err != nil {
+		return nil, fmt.Errorf("failed to parse Stevo MCP result: %v", err)
 	}
-	return instances, nil
+	if len(mcpResult.Content) == 0 {
+		return nil, fmt.Errorf("Stevo MCP result has no content")
+	}
+
+	// The text field contains a JSON string with the instances array.
+	var instancesResp models.StevoInstancesResponse
+	if err := json.Unmarshal([]byte(mcpResult.Content[0].Text), &instancesResp); err != nil {
+		return nil, fmt.Errorf("failed to parse Stevo instances: %v (text: %.200s)", err, mcpResult.Content[0].Text)
+	}
+	return instancesResp.Instances, nil
 }
 
 func broadcastStevoUpdate(userID, panelID int64, status string) {
