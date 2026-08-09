@@ -120,7 +120,7 @@
             </button>
             <button type="button" class="provider-option" :class="{ active: form.provider === 'stevo' }"
                     @click="selectProvider('stevo')">
-              <span class="provider-icon">💬</span>
+              <img src="/stevo-logo.png" alt="Stevo" class="provider-logo" />
               <span class="provider-name">Stevo</span>
               <span class="provider-desc">stevo.chat</span>
             </button>
@@ -384,6 +384,7 @@ onUnmounted(() => { if (pollTimer) clearInterval(pollTimer) })
 .provider-option:hover { border-color: rgba(255,255,255,0.15); background: rgba(255,255,255,0.03); }
 .provider-option.active { border-color: var(--accent, #00e676); background: rgba(0,230,118,0.06); }
 .provider-icon { font-size: 20px; }
+.provider-logo { width: 28px; height: 28px; object-fit: contain; border-radius: 4px; }
 .provider-name { font-weight: 600; font-size: 13px; }
 .provider-desc { font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); }
 </style>

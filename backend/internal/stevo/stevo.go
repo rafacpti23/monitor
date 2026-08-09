@@ -158,6 +158,7 @@ func fetchStevoInstances(baseURL, apiToken string) ([]models.StevoInstance, erro
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json, text/event-stream")
 	req.Header.Set("Authorization", "Bearer "+apiToken)
 
 	client := &http.Client{Timeout: 15 * time.Second}
