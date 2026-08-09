@@ -128,7 +128,7 @@ func runWebsiteChecks() {
 			WHERE id = ?`, status, code, ms, w.ID)
 
 		if !ok {
-			alerts.CreateIncident(w.UserID, "website", w.ID, "website_down", "critical", "Website "+w.URL+" is down", "[]")
+			alerts.CreateIncident(w.UserID, "website", w.ID, "website_down", "critical", "Website "+w.URL+" is down", alerts.GetUserChannelsJSON(w.UserID))
 		} else {
 			// Resolve incident if it was active
 			_, _ = db.DB.Exec(`UPDATE incidents SET status = 'resolved', resolved_at = datetime('now'), end_time = datetime('now')
@@ -172,7 +172,7 @@ func runGenericChecks() {
 
 		alerts.EvaluateCheckResult(c.UserID, c.ID, ok, ms)
 		if !ok {
-			alerts.CreateIncident(c.UserID, "check", c.ID, "check_failed", "warning", "Check "+c.Name+" failed", "[]")
+			alerts.CreateIncident(c.UserID, "check", c.ID, "check_failed", "warning", "Check "+c.Name+" failed", alerts.GetUserChannelsJSON(c.UserID))
 		}
 	}
 }
@@ -252,7 +252,7 @@ func checkServerNodata() {
 		_, _ = db.DB.Exec("UPDATE servers SET status = 'offline' WHERE id = ?", o.id)
 		gapMin := o.gapSeconds / 60
 		msg := "Servidor " + o.name + " está offline (sem dados há " + strconv.FormatInt(gapMin, 10) + "min)"
-		alerts.CreateIncident(o.uid, "server", o.id, "nodata", "critical", msg, "[]")
+		alerts.CreateIncident(o.uid, "server", o.id, "nodata", "critical", msg, alerts.GetUserChannelsJSON(o.uid))
 
 		// Notify live dashboards that this server went offline.
 		if ws.DefaultHub != nil {

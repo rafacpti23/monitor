@@ -49,7 +49,7 @@ func CheckPanel(panelID int64) {
 	total := len(instances)
 	connected := 0
 	for _, inst := range instances {
-		if strings.ToUpper(inst.Status) == "CONNECTED" {
+		if isPapiConnected(inst.Status) {
 			connected++
 		}
 	}
@@ -57,6 +57,9 @@ func CheckPanel(panelID int64) {
 	_, _ = db.DB.Exec(`UPDATE papi_panels SET status = 'ok', last_checked = datetime('now'),
 		last_error = '', total_instances = ?, connected_instances = ? WHERE id = ?`,
 		total, connected, panelID)
+
+	// Fetch user's enabled channel types once (used for all incident calls below).
+	userChannels := alerts.GetUserChannelsJSON(p.UserID)
 
 	// Upsert each instance and track status transitions.
 	for _, inst := range instances {
@@ -71,7 +74,7 @@ func CheckPanel(panelID int64) {
 			res, insErr := db.DB.Exec(`INSERT INTO papi_instances
 				(panel_id, user_id, instance_id, name, phone_number, status, last_seen, updated_at)
 				VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
-				panelID, p.UserID, inst.ID, inst.Name, inst.PhoneNumber, instStatus)
+				panelID, p.UserID, inst.ID, inst.Name, inst.PhoneConnected, instStatus)
 			if insErr != nil {
 				continue
 			}
@@ -81,7 +84,7 @@ func CheckPanel(panelID int64) {
 			// Existing instance, update.
 			_, _ = db.DB.Exec(`UPDATE papi_instances SET name = ?, phone_number = ?, status = ?,
 				last_seen = datetime('now'), updated_at = datetime('now') WHERE id = ?`,
-				inst.Name, inst.PhoneNumber, instStatus, localID)
+				inst.Name, inst.PhoneConnected, instStatus, localID)
 		} else {
 			continue
 		}
@@ -91,20 +94,20 @@ func CheckPanel(panelID int64) {
 		if label == "" {
 			label = inst.ID
 		}
-		if inst.PhoneNumber != "" {
-			label += " (" + inst.PhoneNumber + ")"
+		if inst.PhoneConnected != "" {
+			label += " (" + inst.PhoneConnected + ")"
 		}
 
-		if instStatus != "CONNECTED" {
+		if !isPapiConnected(instStatus) {
 			// Instance is NOT connected → create critical incident (deduplicated by CreateIncident).
 			msg := fmt.Sprintf("Instância PAPI '%s' está %s (painel %s)", label, instStatus, p.Name)
-			alerts.CreateIncident(p.UserID, "papi_instance", localID, "papi_disconnected", "critical", msg, p.Channels)
-		} else if prevStatus != "" && strings.ToUpper(prevStatus) != "CONNECTED" {
+			alerts.CreateIncident(p.UserID, "papi_instance", localID, "papi_disconnected", "critical", msg, userChannels)
+		} else if prevStatus != "" && !isPapiConnected(prevStatus) {
 			// Was NOT connected, now IS connected → resolve + notify "voltou".
 			subject := "[P-mon] Instância PAPI reconectada"
-			body := fmt.Sprintf("Instância PAPI '%s' voltou a ficar CONNECTED (painel %s)", label, p.Name)
-			alerts.ResolveIncidentAndNotify(p.UserID, "papi_instance", localID, "papi_disconnected", p.Channels, subject, body)
-		} else if instStatus == "CONNECTED" && prevStatus == "" {
+			body := fmt.Sprintf("Instância PAPI '%s' voltou a ficar conectada (painel %s)", label, p.Name)
+			alerts.ResolveIncidentAndNotify(p.UserID, "papi_instance", localID, "papi_disconnected", userChannels, subject, body)
+		} else if isPapiConnected(instStatus) && prevStatus == "" {
 			// New instance, already connected — no action needed.
 		}
 	}
@@ -126,7 +129,7 @@ func CheckPanel(panelID int64) {
 			if !seen[eInstID] {
 				// Instance no longer in API response — mark as removed.
 				_, _ = db.DB.Exec(`UPDATE papi_instances SET status = 'REMOVED', updated_at = datetime('now') WHERE id = ?`, eID)
-				if strings.ToUpper(eStatus) == "CONNECTED" {
+				if isPapiConnected(eStatus) {
 					label := eName
 					if label == "" {
 						label = eInstID
@@ -135,7 +138,7 @@ func CheckPanel(panelID int64) {
 						label += " (" + ePhone + ")"
 					}
 					msg := fmt.Sprintf("Instância PAPI '%s' foi removida do painel %s", label, p.Name)
-					alerts.CreateIncident(p.UserID, "papi_instance", eID, "papi_disconnected", "critical", msg, p.Channels)
+					alerts.CreateIncident(p.UserID, "papi_instance", eID, "papi_disconnected", "critical", msg, userChannels)
 				}
 			}
 		}
@@ -144,9 +147,9 @@ func CheckPanel(panelID int64) {
 	broadcastPapiUpdate(p.UserID, panelID, "ok")
 }
 
-// fetchInstances calls PAPI /api/instances and returns parsed results.
+// fetchInstances calls PAPI /api/v1/instances and returns parsed results.
 func fetchInstances(baseURL, panelToken string) ([]models.PapiAPIInstance, error) {
-	url := strings.TrimRight(baseURL, "/") + "/api/instances"
+	url := strings.TrimRight(baseURL, "/") + "/api/v1/instances"
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
@@ -166,11 +169,14 @@ func fetchInstances(baseURL, panelToken string) ([]models.PapiAPIInstance, error
 		return nil, fmt.Errorf("PAPI returned %d: %s", resp.StatusCode, string(body))
 	}
 
-	var instances []models.PapiAPIInstance
-	if err := json.NewDecoder(resp.Body).Decode(&instances); err != nil {
+	var apiResp models.PapiAPIResponse
+	if err := json.NewDecoder(resp.Body).Decode(&apiResp); err != nil {
 		return nil, fmt.Errorf("failed to decode PAPI response: %v", err)
 	}
-	return instances, nil
+	if !apiResp.Success {
+		return nil, fmt.Errorf("PAPI API returned success=false")
+	}
+	return apiResp.Instances, nil
 }
 
 func broadcastPapiUpdate(userID, panelID int64, status string) {
@@ -180,4 +186,10 @@ func broadcastPapiUpdate(userID, panelID int64, status string) {
 			"status":   status,
 		})
 	}
+}
+
+// isPapiConnected returns true if the PAPI instance status indicates a connected session.
+func isPapiConnected(status string) bool {
+	s := strings.ToUpper(strings.TrimSpace(status))
+	return s == "CONNECTED" || s == "ACTIVE" || s == "OPEN"
 }

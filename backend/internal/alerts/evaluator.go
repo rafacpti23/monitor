@@ -1,10 +1,12 @@
 package alerts
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -163,7 +165,39 @@ func CreateIncident(userID int64, monitorType string, monitorID int64, alertType
 	incidentID, _ := res.LastInsertId()
 	log.Printf("Incident #%d created (user %d): %s", incidentID, userID, msg)
 
-	DispatchNotifications(userID, incidentID, channelsJSON, fmt.Sprintf("[P-mon] %s alert", alertType), msg)
+	// Get monitor name for templating
+	monitorName := ""
+	monitorURL := ""
+	switch monitorType {
+	case "website":
+		db.DB.QueryRow(`SELECT name, url FROM websites WHERE id = ?`, monitorID).Scan(&monitorName, &monitorURL)
+	case "server":
+		db.DB.QueryRow(`SELECT name FROM servers WHERE id = ?`, monitorID).Scan(&monitorName)
+	case "check":
+		db.DB.QueryRow(`SELECT target FROM checks WHERE id = ?`, monitorID).Scan(&monitorName)
+	}
+	if monitorName == "" {
+		monitorName = fmt.Sprintf("%s #%d", monitorType, monitorID)
+	}
+
+	// Get template
+	subjectTemplate, bodyTemplate := GetTemplateForAlert(userID, alertType)
+
+	// Apply variables
+	vars := TemplateVars{
+		AlertType:   alertType,
+		MonitorType: monitorType,
+		MonitorName: monitorName,
+		MonitorURL:  monitorURL,
+		Status:      "⚠ Alerta",
+		Duration:    "Acaba de acontecer",
+		Timestamp:   time.Now().Format("2006-01-02 15:04:05"),
+		Message:     msg,
+	}
+	subject := ApplyTemplate(subjectTemplate, vars)
+	body := ApplyTemplate(bodyTemplate, vars)
+
+	DispatchNotifications(userID, incidentID, channelsJSON, subject, body)
 }
 
 // ResolveIncidentAndNotify closes the active incident for the given monitor+alert
@@ -320,3 +354,85 @@ func dockerRunning(containers []models.AgentContainer, name string) bool {
 	}
 	return false
 }
+
+// GetUserChannelsJSON returns a JSON array of the user's enabled channel type names
+// (e.g. ["whatsapp","email"]) so incidents can be notified without the caller
+// needing to know the exact channel IDs.
+func GetUserChannelsJSON(userID int64) string {
+	rows, err := db.DB.Query(`SELECT DISTINCT type FROM alert_channels
+		WHERE user_id = ? AND enabled = 1`, userID)
+	if err != nil {
+		return "[]"
+	}
+	defer rows.Close()
+	types := []string{}
+	for rows.Next() {
+		var t string
+		if err := rows.Scan(&t); err == nil {
+			types = append(types, t)
+		}
+	}
+	if len(types) == 0 {
+		return "[]"
+	}
+	b, _ := json.Marshal(types)
+	return string(b)
+}
+
+// TemplateVars holds variables for message templating
+type TemplateVars struct {
+	AlertType   string
+	MonitorType string
+	MonitorName string
+	MonitorURL  string
+	Status      string
+	Duration    string
+	Timestamp   string
+	Message     string
+}
+
+// ApplyTemplate substitutes {{variable}} placeholders in a template string
+func ApplyTemplate(template string, vars TemplateVars) string {
+	result := template
+	replacements := map[string]string{
+		"{{alert_type}}":   vars.AlertType,
+		"{{monitor_type}}": vars.MonitorType,
+		"{{monitor_name}}": vars.MonitorName,
+		"{{monitor_url}}":  vars.MonitorURL,
+		"{{status}}":       vars.Status,
+		"{{duration}}":     vars.Duration,
+		"{{timestamp}}":    vars.Timestamp,
+		"{{message}}":      vars.Message,
+	}
+	for key, value := range replacements {
+		result = strings.ReplaceAll(result, key, value)
+	}
+	return result
+}
+
+// GetTemplateForAlert retrieves the custom template for an alert type, or returns default
+func GetTemplateForAlert(userID int64, alertType string) (subject, body string) {
+	// Default templates
+	defaults := map[string][2]string{
+		"website_down": {"🌐❌ Site fora do ar: {{monitor_name}}", "🌐❌ *SITE FORA DO AR*\n\n📛 Monitor: *{{monitor_name}}*\n🔗 URL: {{monitor_url}}\n🕐 Hora: {{timestamp}}\n\n📋 Detalhes: {{message}}"},
+		"server_down":  {"🖥️💀 Servidor offline: {{monitor_name}}", "🖥️💀 *SERVIDOR OFFLINE*\n\n📛 Servidor: *{{monitor_name}}*\n⏱️ Duração: {{duration}}\n🕐 Hora: {{timestamp}}"},
+		"check_failed": {"⚠️ Verificação falhou: {{monitor_name}}", "⚠️ *VERIFICAÇÃO FALHOU*\n\n📛 Monitor: *{{monitor_name}}*\n📋 Detalhes: {{message}}\n🕐 Hora: {{timestamp}}"},
+		"nodata":       {"📡 Sem dados: {{monitor_name}}", "📡 *SEM DADOS DO AGENTE*\n\n📛 Servidor: *{{monitor_name}}*\n⏱️ Sem envio há: {{duration}}\n🕐 Hora: {{timestamp}}"},
+		"resolved":     {"✅ Normalizado: {{monitor_name}}", "✅ *VOLTOU AO NORMAL*\n\n📛 Monitor: *{{monitor_name}}*\n⏱️ Duração do incidente: {{duration}}\n🕐 Hora: {{timestamp}}"},
+	}
+
+	var customSubject, customBody sql.NullString
+	err := db.DB.QueryRow(`SELECT subject, body FROM alert_templates WHERE user_id = ? AND alert_type = ?`, userID, alertType).
+		Scan(&customSubject, &customBody)
+
+	if err == nil && customSubject.Valid && customBody.Valid {
+		return customSubject.String, customBody.String
+	}
+
+	if defaults[alertType] != [2]string{} {
+		return defaults[alertType][0], defaults[alertType][1]
+	}
+
+	return "[P-mon] {{alert_type}}", "{{message}}"
+}
+

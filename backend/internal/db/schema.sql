@@ -273,3 +273,15 @@ CREATE TABLE IF NOT EXISTS system_logs (
 );
 CREATE INDEX IF NOT EXISTS idx_system_logs_user_id ON system_logs(user_id);
 CREATE INDEX IF NOT EXISTS idx_system_logs_timestamp ON system_logs(timestamp);
+
+CREATE TABLE IF NOT EXISTS alert_templates (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    alert_type TEXT NOT NULL DEFAULT 'website_down' CHECK(alert_type IN ('website_down','server_down','check_failed','nodata','resolved')),
+    subject TEXT NOT NULL DEFAULT '[P-mon] {{alert_type}} alert',
+    body TEXT NOT NULL DEFAULT 'Monitor: {{monitor_name}}\nStatus: {{status}}\nTime: {{timestamp}}\nDuration: {{duration}}',
+    created_at DATETIME NOT NULL DEFAULT (datetime('now')),
+    updated_at DATETIME NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_alert_templates_user_id ON alert_templates(user_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_alert_templates_user_alert ON alert_templates(user_id, alert_type);

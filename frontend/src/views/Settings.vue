@@ -173,6 +173,11 @@
         <span v-if="systemMsg" class="save-msg">{{ systemMsg }}</span>
       </div>
     </div>
+
+    <!-- TEMPLATES -->
+    <div v-if="currentTab === 'templates'">
+      <SettingsTemplates />
+    </div>
   </div>
 </template>
 
@@ -180,12 +185,14 @@
 import { ref, onMounted } from 'vue'
 import api from '../composables/useApi'
 import { useAuthStore } from '../stores/auth'
+import SettingsTemplates from '../components/SettingsTemplates.vue'
 
 const auth = useAuthStore()
 
 const tabs = [
   { id: 'profile', label: 'Perfil' },
   { id: 'channels', label: 'Canais de Alerta' },
+  { id: 'templates', label: 'Templates' },
   { id: 'system', label: 'Sistema' },
 ]
 const currentTab = ref('profile')

@@ -24,7 +24,18 @@
 
     <!-- Stats Row -->
     <div class="stats-grid">
-      <div class="metric-card" style="--card-accent: var(--accent)">
+
+      <!-- Card: Servidores -->
+      <ElectricBorder
+        :color="stats.servers.down > 0 ? '#ff5252' : '#00e676'"
+        :intensity="stats.servers.down > 0 ? Math.min(0.35 + stats.servers.down * 0.2, 1) : 0.18"
+        :chaos="stats.servers.down > 0 ? 0.28 + stats.servers.down * 0.08 : 0.08"
+        :speed="stats.servers.down > 0 ? 1.6 : 0.7"
+        :thickness="stats.servers.down > 0 ? 2 : 1.2"
+        :border-radius="8"
+        class="metric-card"
+        style="--card-accent: var(--accent)"
+      >
         <div class="card-icon" style="background: rgba(0,230,118,0.1);">
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="var(--accent)" stroke-width="1.5">
             <rect x="2" y="4" width="16" height="4" rx="1"/>
@@ -35,13 +46,25 @@
         </div>
         <div class="metric-value">{{ stats.servers.online }}<span style="font-size: 14px; color: var(--text-muted);">/{{ stats.servers.total }}</span></div>
         <div class="metric-label">Servidores Online</div>
-        <div class="metric-trend up">
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="var(--accent)"><path d="M5 2L9 7H1z"/></svg>
+        <div class="metric-trend" :class="stats.servers.down > 0 ? 'down' : 'up'">
+          <svg width="10" height="10" viewBox="0 0 10 10" :fill="stats.servers.down > 0 ? 'var(--accent-red)' : 'var(--accent)'">
+            <path :d="stats.servers.down > 0 ? 'M5 8L1 3h8z' : 'M5 2L9 7H1z'"/>
+          </svg>
           {{ stats.servers.down }} offline
         </div>
-      </div>
+      </ElectricBorder>
 
-      <div class="metric-card" style="--card-accent: var(--accent-blue)">
+      <!-- Card: Websites -->
+      <ElectricBorder
+        :color="stats.websites.up < stats.websites.total ? '#448aff' : '#448aff'"
+        :intensity="stats.websites.up < stats.websites.total ? Math.min(0.3 + (stats.websites.total - stats.websites.up) * 0.15, 0.9) : 0.15"
+        :chaos="stats.websites.up < stats.websites.total ? 0.22 : 0.07"
+        :speed="stats.websites.up < stats.websites.total ? 1.3 : 0.6"
+        :thickness="1.5"
+        :border-radius="8"
+        class="metric-card"
+        style="--card-accent: var(--accent-blue)"
+      >
         <div class="card-icon" style="background: rgba(68,138,255,0.1);">
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="var(--accent-blue)" stroke-width="1.5">
             <circle cx="10" cy="10" r="8"/>
@@ -50,12 +73,20 @@
         </div>
         <div class="metric-value">{{ stats.websites.up }}<span style="font-size: 14px; color: var(--text-muted);">/{{ stats.websites.total }}</span></div>
         <div class="metric-label">Websites OK</div>
-        <div class="metric-trend neutral">
-          avg {{ stats.websites.avgResponse }}ms
-        </div>
-      </div>
+        <div class="metric-trend neutral">avg {{ stats.websites.avgResponse }}ms</div>
+      </ElectricBorder>
 
-      <div class="metric-card" style="--card-accent: var(--accent-amber)">
+      <!-- Card: Alertas -->
+      <ElectricBorder
+        :color="stats.alerts.critical > 0 ? '#ff5252' : stats.alerts.active > 0 ? '#ffab00' : '#ffab00'"
+        :intensity="stats.alerts.critical > 0 ? Math.min(0.4 + stats.alerts.critical * 0.15, 1) : stats.alerts.active > 0 ? Math.min(0.25 + stats.alerts.active * 0.1, 0.85) : 0.1"
+        :chaos="stats.alerts.critical > 0 ? 0.38 : stats.alerts.active > 0 ? 0.2 : 0.06"
+        :speed="stats.alerts.critical > 0 ? 2.0 : stats.alerts.active > 0 ? 1.4 : 0.5"
+        :thickness="stats.alerts.critical > 0 ? 2.2 : 1.5"
+        :border-radius="8"
+        class="metric-card"
+        style="--card-accent: var(--accent-amber)"
+      >
         <div class="card-icon" style="background: rgba(255,171,0,0.1);">
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="var(--accent-amber)" stroke-width="1.5">
             <path d="M10 2L2 16h16L10 2z"/>
@@ -68,9 +99,20 @@
           <svg width="10" height="10" viewBox="0 0 10 10" fill="var(--accent-red)"><path d="M5 8L1 3h8z"/></svg>
           {{ stats.alerts.critical }} críticos
         </div>
-      </div>
+        <div class="metric-trend neutral" v-else>sem críticos</div>
+      </ElectricBorder>
 
-      <div class="metric-card" style="--card-accent: var(--accent-purple)">
+      <!-- Card: Uptime -->
+      <ElectricBorder
+        color="#7c4dff"
+        :intensity="0.16"
+        :chaos="0.07"
+        :speed="0.6"
+        :thickness="1.2"
+        :border-radius="8"
+        class="metric-card"
+        style="--card-accent: var(--accent-purple)"
+      >
         <div class="card-icon" style="background: rgba(124,77,255,0.1);">
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="var(--accent-purple)" stroke-width="1.5">
             <circle cx="10" cy="10" r="8"/>
@@ -83,7 +125,8 @@
           <svg width="10" height="10" viewBox="0 0 10 10" fill="var(--accent)"><path d="M5 2L9 7H1z"/></svg>
           últimos 7 dias
         </div>
-      </div>
+      </ElectricBorder>
+
     </div>
 
     <!-- Main Grid -->
@@ -164,6 +207,11 @@
           </table>
           <div v-else class="empty-state">Nenhum servidor cadastrado. Adicione o primeiro!</div>
         </div>
+
+        <!-- Banner Papi S3 -->
+        <a href="https://painelcliente.com.br/aff.php?aff=78" target="_blank" rel="noopener noreferrer" class="dashboard-banner">
+          <img src="/banner-papi.png" alt="Papi S3" class="banner-img" />
+        </a>
       </div>
 
       <!-- Incident Timeline -->
@@ -220,6 +268,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import api from '../composables/useApi'
 import { useSocket } from '../composables/useSocket'
+import ElectricBorder from '../components/ElectricBorder.vue'
 
 const loading = ref(true)
 const servers = ref([])
@@ -361,4 +410,25 @@ function timeAgo(dateStr) {
 .row-stale .bar-fill { background: var(--text-muted) !important; }
 .row-stale .bar-value { color: var(--text-muted) !important; text-decoration: line-through; }
 .stale-note { font-size: 10px; color: var(--accent-red); font-family: var(--font-mono); margin-top: 2px; }
+
+/* Banner */
+.dashboard-banner {
+  display: block;
+  margin: 20px auto 0;
+  max-width: 50%;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  transition: all 0.3s ease;
+}
+.dashboard-banner:hover {
+  border-color: var(--border-bright);
+  box-shadow: 0 4px 16px rgba(0, 230, 118, 0.08);
+  transform: translateY(-1px);
+}
+.banner-img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
 </style>

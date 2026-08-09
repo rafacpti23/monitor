@@ -180,12 +180,21 @@ type PapiInstance struct {
 	UpdatedAt   time.Time  `json:"updated_at"`
 }
 
-// PapiAPIInstance mirrors the JSON returned by PAPI /api/instances.
+// PapiAPIResponse is the envelope returned by PAPI /api/v1/instances.
+type PapiAPIResponse struct {
+	Success   bool             `json:"success"`
+	Count     int              `json:"count"`
+	Instances []PapiAPIInstance `json:"instances"`
+}
+
+// PapiAPIInstance mirrors one instance in the PAPI response.
 type PapiAPIInstance struct {
-	ID          string `json:"id"`
-	Status      string `json:"status"`
-	Name        string `json:"name"`
-	PhoneNumber string `json:"phoneNumber"`
+	ID             string `json:"id"`
+	UpstreamID     string `json:"upstream_id"`
+	Status         string `json:"status"`
+	Name           string `json:"name"`
+	PhoneConnected string `json:"phone_connected"`
+	CreatedAt      string `json:"created_at"`
 }
 
 type AlertRule struct {
@@ -266,6 +275,16 @@ type AgentPayload struct {
 	Services         []AgentService    `json:"services"`
 	AgentVersion     string            `json:"agent_version"`
 	IntervalSeconds  int               `json:"interval_seconds"`
+}
+
+type AlertTemplate struct {
+	ID        int64     `json:"id"`
+	UserID    int64     `json:"user_id"`
+	AlertType string    `json:"alert_type"`
+	Subject   string    `json:"subject"`
+	Body      string    `json:"body"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 type AgentDisk struct {

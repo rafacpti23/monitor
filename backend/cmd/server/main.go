@@ -130,6 +130,13 @@ func main() {
 			protected.PUT("/alert-rules/:id", api.UpdateRule)
 			protected.DELETE("/alert-rules/:id", api.DeleteRule)
 
+			// Alert Templates
+			protected.GET("/alert-templates", api.ListTemplates)
+			protected.POST("/alert-templates", api.CreateTemplate)
+			protected.PUT("/alert-templates/:id", api.UpdateTemplate)
+			protected.DELETE("/alert-templates/:id", api.DeleteTemplate)
+			protected.POST("/alert-templates/:alert_type/reset", api.ResetTemplate)
+
 			// Company (whitelabel) + internal users
 			protected.GET("/company", api.GetCompany)
 			protected.PUT("/company", api.UpdateCompany)

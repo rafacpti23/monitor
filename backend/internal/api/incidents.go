@@ -1,9 +1,12 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
+	"p-mon-backend/internal/alerts"
 	"p-mon-backend/internal/auth"
 	"p-mon-backend/internal/db"
 	"p-mon-backend/pkg/models"
@@ -79,6 +82,16 @@ func ResolveIncident(c *gin.Context) {
 	userID := auth.GetUserID(c)
 	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 
+	// Get incident details before resolving
+	var incident models.Incident
+	err := db.DB.QueryRow(`SELECT id, user_id, monitor_type, monitor_id, alert_type, start_time FROM incidents
+		WHERE id = ? AND user_id = ? AND status IN ('active', 'acknowledged')`, id, userID).
+		Scan(&incident.ID, &incident.UserID, &incident.MonitorType, &incident.MonitorID, &incident.AlertType, &incident.StartTime)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Incident not found or already resolved"})
+		return
+	}
+
 	res, err := db.DB.Exec(`UPDATE incidents SET status = 'resolved', resolved_at = datetime('now'), end_time = datetime('now')
 		WHERE id = ? AND user_id = ? AND status IN ('active', 'acknowledged')`, id, userID)
 	if err != nil {
@@ -89,7 +102,53 @@ func ResolveIncident(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Incident not found or already resolved"})
 		return
 	}
+
+	// Send resolution notification
+	go sendResolutionNotification(incident)
+
 	c.JSON(http.StatusOK, gin.H{"message": "Resolved"})
+}
+
+// sendResolutionNotification sends a "back to normal" message to user channels
+func sendResolutionNotification(incident models.Incident) {
+	// Get monitor name
+	monitorName := ""
+	switch incident.MonitorType {
+	case "website":
+		db.DB.QueryRow(`SELECT name FROM websites WHERE id = ?`, incident.MonitorID).Scan(&monitorName)
+	case "server":
+		db.DB.QueryRow(`SELECT name FROM servers WHERE id = ?`, incident.MonitorID).Scan(&monitorName)
+	case "check":
+		db.DB.QueryRow(`SELECT target FROM checks WHERE id = ?`, incident.MonitorID).Scan(&monitorName)
+	}
+	if monitorName == "" {
+		monitorName = fmt.Sprintf("%s #%d", incident.MonitorType, incident.MonitorID)
+	}
+
+	// Calculate duration
+	duration := time.Since(incident.StartTime).Round(time.Minute).String()
+
+	// Get user channels
+	userChannels := alerts.GetUserChannelsJSON(incident.UserID)
+
+	// Get template for resolved alert
+	subject, bodyTemplate := alerts.GetTemplateForAlert(incident.UserID, "resolved")
+
+	// Apply variables
+	vars := alerts.TemplateVars{
+		AlertType:   "resolved",
+		MonitorType: incident.MonitorType,
+		MonitorName: monitorName,
+		Status:      "✓ Operacional",
+		Duration:    duration,
+		Timestamp:   time.Now().Format("2006-01-02 15:04:05"),
+		Message:     incident.Message,
+	}
+	body := alerts.ApplyTemplate(bodyTemplate, vars)
+	subject = alerts.ApplyTemplate(subject, vars)
+
+	// Dispatch
+	alerts.DispatchNotifications(incident.UserID, incident.ID, userChannels, subject, body)
 }
 
 type IgnoreReq struct {
